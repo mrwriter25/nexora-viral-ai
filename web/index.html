@@ -2,12 +2,12 @@
 <style>
 :root{--r:#ff3445;--bg:#070708;--p:#121114;--line:#411820;--muted:#ac969a}*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#260b12,#070708 60%);color:#f5eeee;font:15px system-ui}header{padding:22px 5%;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}.logo{font-size:22px;font-weight:900;letter-spacing:2px;color:var(--r)}.tag{font-size:11px;border:1px solid #5b242d;border-radius:20px;padding:7px;color:#ff9aa2}main{max-width:1180px;margin:30px auto;padding:0 16px}.hero h1{font-size:clamp(30px,5vw,52px);margin:0}.hero p{color:var(--muted);max-width:680px}.layout{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:16px;margin-top:25px}.card{background:linear-gradient(145deg,#171317,#0e0d10);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:0 0 24px #4d11100a}.card h2{color:#ff6875;font-size:15px;margin:0 0 15px}.wide{grid-column:1/-1}label{display:block;color:#bda9ac;font-size:12px;margin:11px 0 5px}input,select,textarea{width:100%;padding:10px;border:1px solid #432029;background:#09090b;color:#fff;border-radius:9px}button{border:0;background:var(--r);color:white;padding:11px 14px;border-radius:9px;font-weight:700;cursor:pointer;margin-top:12px}button.alt{background:#211419;border:1px solid #54232b}.row{display:flex;gap:10px;flex-wrap:wrap}.row button{flex:1}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#08080a;border-radius:10px;padding:12px;color:#ffc0c6;font-size:12px;min-height:70px}.muted{color:var(--muted);font-size:13px}.projects{display:grid;gap:8px}.project{border:1px solid #3d1a20;border-radius:10px;padding:10px;display:flex;justify-content:space-between;align-items:center;gap:10px}footer{text-align:center;padding:25px;color:#73585d;font-size:12px}
 </style></head><body><header><div class="logo">NEXORA <span style="color:#eee">VIRAL AI</span></div><span class="tag">AUTO CREATOR • v1.1</span></header><main>
-<div class="hero"><h1>Build your next<br><span style="color:var(--r)">viral short.</span></h1><p>Skriv en idé eller låt NEXORA hitta på en. Skapa en egen vertikal story-video utan att ladda upp klipp.</p></div>
+<div class="hero"><h1>Build your next<br><span style="color:var(--r)">viral short.</span></h1><p>Skriv en idé eller låt NEXORA hitta på en. NEXORA söker gratis fotografier, animerar scener, lägger på undertexter och försöker skapa berättarröst – utan att du laddar upp klipp.</p></div>
 <section class="card wide" style="border-color:#ff3445;box-shadow:0 0 28px #ff34451a">
 <h2>⚡ AUTO VIDEO CREATOR — NO UPLOAD NEEDED</h2>
 <label>Din videoidé (lämna tomt för att NEXORA ska hitta på en idé)</label>
 <textarea id="autoPrompt" rows="3" placeholder="Exempel: En rolig skräckhistoria om någon som hör ljud från vinden…"></textarea>
-<p class="muted">NEXORA skapar ett manus och animerade scenbilder och sätter ihop dem till en MP4. Denna demo skapar storyboard-animationer, inte fotorealistiska AI-filmklipp.</p>
+<p class="muted">NEXORA skapar en MP4-montagevideo med matchande Commons-foton när sökningen lyckas. Textning ingår; berättarröst försöker skapas lokalt på servern. Detta är inte fotorealistiskt genererad rörlig AI-film. Bildhämtning kan ta en stund.</p>
 <button onclick="autoCreate()" style="width:100%;font-size:16px;padding:15px">✨ SKAPA VIDEO AUTOMATISKT</button>
 <pre id="autoResult">Redo. Ingen egen video behövs.</pre>
 </section>
@@ -29,7 +29,7 @@ async function post(url,data){let r=await fetch(url,{method:'POST',headers:{'Con
 
 async function autoCreate(){
  const box=document.getElementById('autoResult');
- box.textContent='NEXORA skriver story, skapar scener och renderar videon. Vänta…';
+ box.textContent='NEXORA skriver manus, hämtar foton och renderar video med textning. Vänta…';
  try{
    const p=profile();
    const r=await fetch('/api/auto-create',{method:'POST',headers:{'Content-Type':'application/json'},

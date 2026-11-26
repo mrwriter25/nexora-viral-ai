@@ -1,0 +1,35 @@
+name: Validate NEXORA
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install runtime dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg fonts-dejavu-core espeak-ng
+          python -m pip install -r requirements.txt
+      - name: Compile Python
+        run: python -m compileall -q app
+      - name: Import app and smoke test
+        run: |
+          python - <<'PY'
+          import urllib.request, threading
+          import uvicorn
+          from app.main import app
+          server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=8765, log_level="error"))
+          thread = threading.Thread(target=server.run, daemon=True); thread.start()
+          import time; time.sleep(1.5)
+          with urllib.request.urlopen("http://127.0.0.1:8765/api/status", timeout=5) as r:
+              import json; data=json.load(r); assert r.status==200 and data["status"]=="ready"
+          with urllib.request.urlopen("http://127.0.0.1:8765/", timeout=5) as r: assert r.status==200
+          server.should_exit=True; thread.join(timeout=5)
+          print("NEXORA API and static frontend are ready")
+          PY

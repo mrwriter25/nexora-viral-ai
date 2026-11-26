@@ -2,6 +2,9 @@ from pathlib import Path
 import re, subprocess, uuid, json, shutil, os, time
 from typing import Optional, List
 import feedparser
+import requests
+from functools import wraps
+from threading import Lock
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -16,6 +19,28 @@ PROJECTS = DATA / "projects.json"
 if not PROJECTS.exists(): PROJECTS.write_text("[]", encoding="utf-8")
 
 app = FastAPI(title="NEXORA VIRAL AI", version="1.0.0")
+
+# Protect the free hosting instance from overlapping expensive FFmpeg jobs.
+_generation_lock = Lock()
+_generation_last_started = {}
+
+def generation_guard(cooldown_seconds: int):
+    def decorate(func):
+        @wraps(func)
+        def wrapped(*args, **kwargs):
+            now = time.monotonic()
+            previous = _generation_last_started.get(func.__name__, 0)
+            if now - previous < cooldown_seconds:
+                raise HTTPException(429, "Please wait before starting another video job.")
+            if not _generation_lock.acquire(blocking=False):
+                raise HTTPException(429, "A video job is already running. Try again shortly.")
+            _generation_last_started[func.__name__] = now
+            try:
+                return func(*args, **kwargs)
+            finally:
+                _generation_lock.release()
+        return wrapped
+    return decorate
 
 class Profile(BaseModel):
     niche: str = "Comedy"
@@ -46,7 +71,9 @@ def read_projects():
 def write_projects(items): PROJECTS.write_text(json.dumps(items, ensure_ascii=False, indent=2), encoding="utf-8")
 def safe_media_path(raw):
     p = Path(raw).expanduser().resolve()
-    # Allow project media directory or explicit existing local files for single-user local installation.
+    # Never allow public requests to make FFmpeg read arbitrary server files.
+    try: p.relative_to(MEDIA.resolve())
+    except ValueError: raise HTTPException(400, "Choose a file uploaded through NEXORA.")
     if not p.exists() or not p.is_file(): raise HTTPException(404, "Media file not found.")
     return p
 
@@ -237,7 +264,29 @@ def _story_for(prompt, niche, lang, duration):
                   "What would you do? Tell us below."]
     return idea, beats, narration
 
-def _make_scene(path, headline, body, idx, niche):
+# Free photographic scene assets from Wikimedia Commons; sources/licenses are saved with each export.
+def _commons_photo(query, destination):
+    try:
+        terms = re.sub(r"[^\\w\\s-]", " ", query, flags=re.UNICODE)[:100].strip() or "cinematic photography"
+        response = requests.get("https://commons.wikimedia.org/w/api.php", params={
+            "action":"query","format":"json","generator":"search","gsrsearch":"filetype:bitmap "+terms,
+            "gsrnamespace":6,"gsrlimit":8,"prop":"imageinfo","iiprop":"url|extmetadata","iiurlwidth":1000},
+            headers={"User-Agent":"NexoraViralAI/1.2 (open-source video creator)"},timeout=18)
+        response.raise_for_status()
+        pages=list(response.json().get("query",{}).get("pages",{}).values()); random.shuffle(pages)
+        for page in pages:
+            info=(page.get("imageinfo") or [{}])[0]; url=info.get("thumburl") or info.get("url")
+            if not url: continue
+            image=requests.get(url,headers={"User-Agent":"NexoraViralAI/1.2"},timeout=25); image.raise_for_status()
+            if len(image.content)<12000: continue
+            destination.write_bytes(image.content); meta=info.get("extmetadata",{})
+            return {"title":page.get("title",""),"source":info.get("descriptionurl",url),
+                "license":meta.get("LicenseShortName",{}).get("value","License not identified"),
+                "artist":meta.get("Artist",{}).get("value","Unknown")}
+    except Exception: pass
+    return None
+
+def _make_scene(path, headline, body, idx, niche, photo=None):
     W,H=720,1280
     # cinematic vertical gradient
     palettes={"Horror":((8,8,28),(105,12,40)),"Comedy":((20,30,70),(220,70,90)),
@@ -245,7 +294,15 @@ def _make_scene(path, headline, body, idx, niche):
               "Beauty & Makeup":((35,15,40),(180,70,110)),"Sport & Fitness":((5,45,55),(20,130,130)),
               "Action & Adventure":((8,20,45),(150,55,25)),"Nightlife & Parties":((20,5,50),(80,20,120))}
     top,bottom=palettes.get(niche,((10,15,35),(90,20,60)))
-    im=Image.new("RGB",(W,H)); pix=im.load()
+    im=None
+    if photo and photo.exists():
+        try:
+            from PIL import ImageOps, ImageEnhance
+            im=ImageOps.fit(Image.open(photo).convert("RGB"),(W,H),method=Image.Resampling.LANCZOS)
+            im=ImageEnhance.Brightness(ImageEnhance.Color(im).enhance(1.1)).enhance(0.55)
+        except Exception: im=None
+    if im is None:
+        im=Image.new("RGB",(W,H)); pix=im.load()
     for y in range(H):
         t=y/(H-1)
         c=tuple(int(top[k]*(1-t)+bottom[k]*t) for k in range(3))
@@ -269,6 +326,7 @@ def _make_scene(path, headline, body, idx, niche):
     im.save(path,quality=92)
 
 @app.post("/api/auto-create")
+@generation_guard(75)
 def auto_create(data: dict):
     prompt=str(data.get("prompt",""))[:700]
     niche=str(data.get("niche","Comedy"))[:80]
@@ -283,9 +341,13 @@ def auto_create(data: dict):
     scene_dir.mkdir(parents=True,exist_ok=True)
     idea,beats,narration=_story_for(prompt,niche,lang,duration)
     scenes=[]
+    scenes_credits=[]
     for i,(head,body) in enumerate(beats):
         img=scene_dir/f"scene_{i:02d}.jpg"
-        _make_scene(img,head,body,i,niche)
+        photo=scene_dir/f"photo_{i:02d}.jpg"
+        credits=_commons_photo(" ".join((idea+" "+niche+" "+body).split()[:9]),photo)
+        if credits: credits["scene"]=i+1; scenes_credits.append(credits)
+        _make_scene(img,head,body,i,niche,photo if credits else None)
         scenes.append(img)
     # Compose each scene as a gentle zoom, then concatenate; no uploaded media required.
     segment=max(2,duration/len(scenes))
@@ -301,17 +363,40 @@ def auto_create(data: dict):
     concat=scene_dir/"concat.txt"
     concat.write_text("".join(f"file '{p.as_posix()}'\n" for p in pieces),encoding="utf-8")
     final=OUT/f"{project_id}.mp4"
-    cmd=["ffmpeg","-y","-f","concat","-safe","0","-i",str(concat),"-t",str(duration),
-         "-c:v","libx264","-preset","ultrafast","-crf","25","-pix_fmt","yuv420p","-movflags","+faststart",str(final)]
+    # Burn readable timed captions and add free offline TTS when available.
+    srt=scene_dir/"captions.srt"
+    def stamp(seconds):
+        ms=int(max(0,seconds)*1000); hh=ms//3600000; mm=(ms%3600000)//60000; ss=(ms%60000)//1000; msec=ms%1000
+        return f"{hh:02d}:{mm:02d}:{ss:02d},{msec:03d}"
+    cap_lines=[]
+    for i,line in enumerate(narration):
+        cap_lines.append(f"{i+1}\\n{stamp(i*duration/len(narration))} --> {stamp((i+1)*duration/len(narration))}\\n{line}\\n")
+    srt.write_text("\\n".join(cap_lines),encoding="utf-8")
+    srt_filter=str(srt).replace("\\\\","/").replace(":","\\\\:")
+    narration_file=scene_dir/"narration.wav"
+    voice_ok=False
+    voice=["espeak-ng","-v", "sv" if lang.lower().startswith("sv") else "en", "-s","155","-w",str(narration_file)," ".join(narration)]
+    if shutil.which("espeak-ng"):
+        try: subprocess.run(voice,check=True,capture_output=True,timeout=45); voice_ok=True
+        except Exception: voice_ok=False
+    cmd=["ffmpeg","-y","-f","concat","-safe","0","-i",str(concat)]
+    if voice_ok: cmd += ["-i",str(narration_file)]
+    cmd += ["-t",str(duration),"-vf",f"subtitles='{srt_filter}',scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2",
+         "-c:v","libx264","-preset","ultrafast","-crf","25","-pix_fmt","yuv420p"]
+    if voice_ok: cmd += ["-map","0:v:0","-map","1:a:0","-c:a","aac","-b:a","128k","-shortest"]
+    else: cmd += ["-an"]
+    cmd += ["-movflags","+faststart",str(final)]
     try: subprocess.run(cmd,check=True,capture_output=True,timeout=240)
     except subprocess.CalledProcessError as e: raise HTTPException(500,"Video assembly failed: "+e.stderr.decode(errors="ignore")[-1200:])
+    (scene_dir/"media_credits.json").write_text(json.dumps(scenes_credits,ensure_ascii=False,indent=2),encoding="utf-8")
     return {"status":"created","title":idea[:90],"idea":idea,"script":"\n".join(narration),
             "file":f"/outputs/{final.name}","format":"720x1280 MP4","duration":duration,
-            "visual_mode":"Automatically generated animated storyboard scenes. Not photorealistic AI video yet.",
+            "visual_mode":"Photographs sourced automatically from Wikimedia Commons where available, animated as scenes with timed captions; local synthesized narration is included when the server supports espeak-ng. Not generative moving footage.",
             "next":"Download and review your original generated storyboard short."}
 
 
 @app.post("/api/render")
+@generation_guard(30)
 def render(project: VideoProject):
     if not shutil.which("ffmpeg"): raise HTTPException(500,"FFmpeg missing. Install FFmpeg and restart.")
     if not project.source_video: raise HTTPException(400,"Set source_video to a local file you own or are licensed to use.")
