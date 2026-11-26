@@ -81,5 +81,6 @@ async function startRealAiVideo(){
  finally{button.disabled=false}
 }
 async function checkAgnesVideo(){try{const r=await fetch('/api/ai-video/status'),j=await r.json();document.getElementById('aiVideoStatus').textContent=j.configured?'API anslutningsnyckel finns på servern. Gratis Flash 720P.':'Nästa steg: lägg in din NYA Agnes API-nyckel som AGNES_API_KEY i Render.'}catch(e){document.getElementById('aiVideoStatus').textContent='Backend-status kunde inte läsas.'}}
-\nloadProjects();status();checkAgnesVideo();
+
+loadProjects();status();checkAgnesVideo();
 </script></body></html>
