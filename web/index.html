@@ -1,86 +1,88 @@
-<!doctype html><html lang="sv"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NEXORA VIRAL AI</title>
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NEXORA — Agnes AI Video</title>
 <style>
-:root{--r:#ff3445;--bg:#070708;--p:#121114;--line:#411820;--muted:#ac969a}*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#260b12,#070708 60%);color:#f5eeee;font:15px system-ui}header{padding:22px 5%;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}.logo{font-size:22px;font-weight:900;letter-spacing:2px;color:var(--r)}.tag{font-size:11px;border:1px solid #5b242d;border-radius:20px;padding:7px;color:#ff9aa2}main{max-width:1180px;margin:30px auto;padding:0 16px}.hero h1{font-size:clamp(30px,5vw,52px);margin:0}.hero p{color:var(--muted);max-width:680px}.layout{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:16px;margin-top:25px}.card{background:linear-gradient(145deg,#171317,#0e0d10);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:0 0 24px #4d11100a}.card h2{color:#ff6875;font-size:15px;margin:0 0 15px}.wide{grid-column:1/-1}label{display:block;color:#bda9ac;font-size:12px;margin:11px 0 5px}input,select,textarea{width:100%;padding:10px;border:1px solid #432029;background:#09090b;color:#fff;border-radius:9px}button{border:0;background:var(--r);color:white;padding:11px 14px;border-radius:9px;font-weight:700;cursor:pointer;margin-top:12px}button.alt{background:#211419;border:1px solid #54232b}.row{display:flex;gap:10px;flex-wrap:wrap}.row button{flex:1}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#08080a;border-radius:10px;padding:12px;color:#ffc0c6;font-size:12px;min-height:70px}.muted{color:var(--muted);font-size:13px}.projects{display:grid;gap:8px}.project{border:1px solid #3d1a20;border-radius:10px;padding:10px;display:flex;justify-content:space-between;align-items:center;gap:10px}footer{text-align:center;padding:25px;color:#73585d;font-size:12px}
-</style></head><body><header><div class="logo">NEXORA <span style="color:#eee">VIRAL AI</span></div><span class="tag">AUTO CREATOR • v1.1</span></header><main>
-<div class="hero"><h1>Build your next<br><span style="color:var(--r)">viral short.</span></h1><p>Skriv en idé eller låt NEXORA hitta på en. NEXORA söker gratis fotografier, animerar scener, lägger på undertexter och försöker skapa berättarröst – utan att du laddar upp klipp.</p></div>
-<section class="card wide" style="border-color:#ff3445;box-shadow:0 0 28px #ff34451a">
-<h2>⚡ AUTO VIDEO CREATOR — NO UPLOAD NEEDED</h2>
-<label>Din videoidé (lämna tomt för att NEXORA ska hitta på en idé)</label>
-<textarea id="autoPrompt" rows="3" placeholder="Exempel: En rolig skräckhistoria om någon som hör ljud från vinden…"></textarea>
-<p class="muted">NEXORA skapar en MP4-montagevideo med matchande Commons-foton när sökningen lyckas. Textning ingår; berättarröst försöker skapas lokalt på servern. Detta är inte fotorealistiskt genererad rörlig AI-film. Bildhämtning kan ta en stund.</p>
-<button onclick="autoCreate()" style="width:100%;font-size:16px;padding:15px">✨ SKAPA VIDEO AUTOMATISKT</button>
-<pre id="autoResult">Redo. Ingen egen video behövs.</pre>
+:root{color-scheme:dark;--red:#ff3445;--bg:#08080b;--panel:#151116;--line:#49202a;--muted:#b6a2a8}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:radial-gradient(ellipse at top,#2b0d17 0%,var(--bg) 58%);color:#f8f1f3;font:15px system-ui,sans-serif}
+header{padding:20px 5%;border-bottom:1px solid var(--line);font-weight:900;letter-spacing:2px;font-size:21px;color:var(--red)}
+header span{color:#fff}
+main{width:min(760px,calc(100% - 28px));margin:clamp(28px,8vh,80px) auto}
+.card{background:linear-gradient(145deg,#1b151b,#100e12);border:1px solid var(--red);border-radius:20px;padding:clamp(18px,4vw,32px);box-shadow:0 0 34px #ff34451a}
+h1{font-size:19px;color:#ff6875;margin:0 0 12px}
+p{color:var(--muted);line-height:1.6}
+label{display:block;font-size:12px;color:#c9b4ba;margin:14px 0 6px}
+textarea,select{width:100%;background:#09090c;color:white;border:1px solid #4c2630;border-radius:10px;padding:12px;font:inherit}
+textarea{resize:vertical}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+button{width:100%;margin-top:16px;padding:15px;border:0;border-radius:10px;background:var(--red);color:white;font-weight:800;font-size:15px;cursor:pointer}
+button:disabled{opacity:.55;cursor:wait}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#09090c;border:1px solid #301820;border-radius:10px;padding:13px;color:#ffc0c6;min-height:65px;line-height:1.5}
+#aiVideoLink a{color:#ff8791;font-weight:800;font-size:16px;display:block;padding:12px 0}
+@media(max-width:480px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>NEXORA <span>VIDEO</span></header>
+<main>
+<section class="card" id="realAiVideo">
+<h1>🎬 REAL AI VIDEO — AGNES FREE 720P</h1>
+<p>Genererar rörlig AI-film direkt från text via Agnes AI:s Flash-modell. 720p, 4–12 sekunder. Gratiserbjudandet och kökapaciteten kan ändras hos leverantören.</p>
+<label for="aiPrompt">Beskriv filmklippet</label>
+<textarea id="aiPrompt" rows="5" placeholder="Photorealistic cinematic video: a Swedish red wooden cottage beside a lake at golden hour, gentle camera dolly, realistic natural motion..."></textarea>
+<div class="grid">
+<div><label for="aiSeconds">Klippets längd</label><select id="aiSeconds"><option value="5">5 sekunder</option><option value="6">6 sekunder</option><option value="8">8 sekunder</option><option value="10">10 sekunder</option><option value="12">12 sekunder</option><option value="4">4 sekunder</option></select></div>
+<div><label for="aiRatio">Videoformat</label><select id="aiRatio"><option value="9:16">9:16 — TikTok/Reels</option><option value="16:9">16:9 — YouTube</option><option value="1:1">1:1 — Kvadrat</option><option value="4:3">4:3</option><option value="3:4">3:4</option><option value="21:9">21:9</option></select></div>
+</div>
+<button id="aiStart" type="button">✨ GENERERA RIKTIG AI-FILM</button>
+<pre id="aiVideoStatus">Kontrollerar API-konfiguration…</pre>
+<div id="aiVideoLink"></div>
 </section>
-
-<section class="card wide" id="realAiVideo" style="border-color:#ff3445;box-shadow:0 0 28px #ff34451a">
-<h2>🎬 REAL AI VIDEO — AGNES FREE 720P</h2>
-<p class="muted">Genererar rörlig AI-film direkt från text via Agnes AI:s Flash-gratismodell. 720p, 4–12 sekunder, vertikalt eller liggande. Gratiserbjudandet och kökapaciteten kan ändras hos leverantören.</p>
-<label>Beskriv filmklippet (prompt)</label><textarea id="aiPrompt" rows="4" placeholder="Photorealistic cinematic video: a Swedish red wooden cottage beside a lake at golden hour, gentle camera dolly, realistic natural motion..."></textarea>
-<div class="row"><div style="flex:1"><label>Klippets längd</label><select id="aiSeconds"><option value="5">5 sek</option><option value="6">6 sek</option><option value="8">8 sek</option><option value="10">10 sek</option><option value="12">12 sek</option><option value="4">4 sek</option></select></div><div style="flex:1"><label>Format</label><select id="aiRatio"><option value="9:16">9:16 TikTok/Reels</option><option value="16:9">16:9 YouTube</option><option value="1:1">1:1 Square</option></select></div></div>
-<button id="aiStart" onclick="startRealAiVideo()" style="width:100%;font-size:16px;padding:15px">✨ GENERERA RIKTIG AI-FILM</button><pre id="aiVideoStatus">Kontrollerar API-konfiguration…</pre><div id="aiVideoLink"></div>
-</section>\n<div class="layout">
-<section class="card"><h2>01 / CREATOR PROFILE</h2>
-<label>Niche</label><select id="niche"><option>Beauty & Makeup</option><option>Fashion</option><option>Sport & Fitness</option><option>Nightlife & Parties</option><option>Comedy</option><option>Action & Adventure</option><option>Horror</option><option>Romance</option></select>
-<label>Country code</label><input id="country" value="SE" maxlength="2"><label>Language code</label><input id="language" value="sv"><label>Region</label><input id="region" value="Stockholm"><label>Target audience</label><input id="audience" value="18+"><label>Video length (seconds)</label><input id="duration" type="number" min="10" max="180" value="30"><label>Tone / style</label><input id="tone" value="realistic, cinematic, engaging">
-<div class="row"><button onclick="discover()">Discover trends</button><button class="alt" onclick="plan()">Generate content plan</button></div></section>
-<section class="card"><h2>02 / LIVE TOPIC DISCOVERY</h2><p class="muted">Reads public RSS feeds for supported regions. Headlines are inspiration only; make original content and verify facts.</p><pre id="discovery">Waiting for discovery…</pre></section>
-<section class="card"><h2>03 / SCRIPT & VIDEO</h2><label>Project title</label><input id="title" value="My NEXORA Short"><label>Idea / creative brief</label><textarea id="idea" rows="3" placeholder="What happens in your video?"></textarea><label>Script / captions (text is burned into export)</label><textarea id="script" rows="4" placeholder="Write narration or captions…"></textarea><label>Caption / description</label><textarea id="caption" rows="2"></textarea><label>Hashtags</label><input id="hashtags" placeholder="#shorts #trend"><label>Upload your video (MP4, MOV, WEBM — max 120 MB)</label><input id="videoFile" type="file" accept="video/mp4,video/quicktime,video/webm,video/x-m4v"><button class="alt" onclick="uploadMedia('video')">Upload video</button><pre id="videoUpload">No video uploaded yet.</pre><input id="source" type="hidden"><label>Optional music/audio (MP3, WAV, M4A — max 120 MB)</label><input id="audioFile" type="file" accept="audio/*"><button class="alt" onclick="uploadMedia('audio')">Upload audio</button><pre id="audioUpload">No audio uploaded (optional).</pre><input id="audio" type="hidden"><label><input id="subs" type="checkbox" checked style="width:auto"> Burn script text as subtitles</label><button onclick="render()">Render 9:16 MP4</button><pre id="renderResult">No render yet.</pre></section>
-<section class="card"><h2>04 / PROJECT LIBRARY</h2><p class="muted">Save your project settings and creative notes.</p><button onclick="saveProject()">Save project</button><button class="alt" onclick="loadProjects()">Refresh projects</button><div id="projects" class="projects"></div></section>
-<section class="card"><h2>05 / PUBLISHING HUB</h2><p class="muted">Platform publishing requires your own approved developer app and OAuth credentials.</p><button class="alt" onclick="publishing()">View connection requirements</button><pre id="publishInfo">TikTok and YouTube publishing are not connected yet.</pre></section>
-<section class="card"><h2>06 / SYSTEM STATUS</h2><button class="alt" onclick="status()">Check backend</button><pre id="status">Ready to check.</pre><p class="muted">For public hosting, add user authentication, storage limits, queue workers and encrypted OAuth token storage.</p></section>
-</div></main><footer>Local-first prototype • Use owned/licensed media • Respect platform policies and creator rights</footer>
+</main>
 <script>
-function profile(){return {niche:niche.value,country:country.value,language:language.value,region:region.value,audience:audience.value,tone:tone.value,duration:+duration.value}}
-function project(){return {...profile(),title:title.value,idea:idea.value,script:script.value,caption:caption.value,hashtags:hashtags.value,source_video:source.value||null,source_audio:audio.value||null,subtitles:subs.checked}}
-async function post(url,data){let r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});let j=await r.json();if(!r.ok)throw Error(j.detail||r.status);return j}
-
-async function autoCreate(){
- const box=document.getElementById('autoResult');
- box.textContent='NEXORA skriver manus, hämtar foton och renderar video med textning. Vänta…';
+const el=id=>document.getElementById(id);
+const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+async function checkAgnesVideo(){
  try{
-   const p=profile();
-   const r=await fetch('/api/auto-create',{method:'POST',headers:{'Content-Type':'application/json'},
-     body:JSON.stringify({prompt:document.getElementById('autoPrompt').value,niche:p.niche,
-       country:p.country,language:p.language,region:p.region,duration:p.duration})});
-   const j=await r.json(); if(!r.ok)throw Error(j.detail||r.status);
-   box.textContent='VIDEO KLAR!\\nTitel: '+j.title+'\\nLängd: '+j.duration+' sekunder\\nFormat: '+j.format+
-     '\\n\\n'+j.visual_mode+'\\nManus:\\n'+j.script;
-   box.innerHTML+='\\n<a style="color:#ff8791;font-weight:bold;font-size:16px" href="'+j.file+'" target="_blank">▶ ÖPPNA / LADDA NER VIDEO</a>';
- }catch(e){box.textContent='Kunde inte skapa video: '+e.message+'\\nKontrollera att Render visar Live och att FFmpeg finns.'}
+  const r=await fetch('/api/ai-video/status');const j=await r.json();
+  el('aiVideoStatus').textContent=j.configured?'API-nyckel hittad på servern. Agnes Free 720P är redo.':'AGNES_API_KEY saknas i Render Environment.';
+ }catch(e){el('aiVideoStatus').textContent='Kunde inte kontrollera serverstatus.'}
 }
-
-async function uploadMedia(kind){let input=document.getElementById(kind==='video'?'videoFile':'audioFile'),box=document.getElementById(kind==='video'?'videoUpload':'audioUpload');if(!input.files.length){box.textContent='Choose a file first.';return}box.textContent='Uploading…';let fd=new FormData();fd.append('file',input.files[0]);try{let r=await fetch('/api/upload/'+kind,{method:'POST',body:fd}),j=await r.json();if(!r.ok)throw Error(j.detail||r.status);document.getElementById(kind==='video'?'source':'audio').value=j.path;box.textContent='Uploaded: '+j.filename+' ('+Math.round(j.size_bytes/1048576)+' MB)'}catch(e){box.textContent='Upload failed: '+e.message}}
-async function discover(){discovery.textContent='Fetching…';try{discovery.textContent=JSON.stringify(await post('/api/discover',profile()),null,2)}catch(e){discovery.textContent=e.message}}
-async function plan(){try{let p=await post('/api/plan',profile());idea.value=p.creative_brief;script.value=p.structure.map(x=>x.time+' — '+x.purpose).join('\n');caption.value='Original '+profile().niche+' short | '+profile().region;hashtags.value='#shorts #'+profile().niche.replaceAll(' ','')}catch(e){alert(e.message)}}
-async function render(){renderResult.textContent='Rendering locally…';try{let j=await post('/api/render',project());renderResult.textContent=JSON.stringify(j,null,2);if(j.file)renderResult.innerHTML+='\\n<a style="color:#ff8791" href="'+j.file+'" target="_blank">Open/download rendered MP4</a>'}catch(e){renderResult.textContent=e.message}}
-async function saveProject(){try{let j=await post('/api/projects',project());alert('Saved project '+j.id);loadProjects()}catch(e){alert(e.message)}}
-async function loadProjects(){const list=document.getElementById('projects');try{let items=await(await fetch('/api/projects')).json();list.innerHTML=items.map(x=>`<div class="project"><span>${x.title} <small>${x.niche} · ${x.country}</small></span><button class="alt" onclick="fillProject('${x.id}')">Load</button></div>`).join('')||'No saved projects'}catch(e){list.textContent=e.message}}
-async function fillProject(id){let items=await(await fetch('/api/projects')).json(),x=items.find(p=>p.id===id);if(!x)return;for(let k of Object.keys(x))if(document.getElementById(k))document.getElementById(k).value=x[k]??'';subs.checked=!!x.subtitles}
-async function status(){const box=document.getElementById('status');try{const r=await fetch('/api/status');if(!r.ok)throw Error('HTTP '+r.status);box.textContent=JSON.stringify(await r.json(),null,2)}catch(e){box.textContent='Backendfel: '+e.message}}
-async function publishing(){publishInfo.textContent=JSON.stringify(await(await fetch('/api/publishing/requirements')).json(),null,2)}
-
 async function startRealAiVideo(){
- const box=document.getElementById('aiVideoStatus'),button=document.getElementById('aiStart'),link=document.getElementById('aiVideoLink');
- const prompt=document.getElementById('aiPrompt').value.trim();link.replaceChildren();
- if(prompt.length<5){box.textContent='Skriv en mer detaljerad prompt först.';return}
- button.disabled=true;box.textContent='Skickar videouppdrag till Agnes AI…';
+ const box=el('aiVideoStatus'),button=el('aiStart'),link=el('aiVideoLink'),prompt=el('aiPrompt').value.trim();
+ link.replaceChildren();
+ if(prompt.length<5){box.textContent='Skriv en tydligare prompt (minst 5 tecken).';return}
+ button.disabled=true;box.textContent='Skickar uppdrag till Agnes AI…';
  try{
-  const resp=await fetch('/api/ai-video/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,seconds:Number(document.getElementById('aiSeconds').value),aspect_ratio:document.getElementById('aiRatio').value})});
-  const task=await resp.json();if(!resp.ok)throw Error(task.detail||'API-fel');
+  const resp=await fetch('/api/ai-video/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,seconds:Number(el('aiSeconds').value),aspect_ratio:el('aiRatio').value})});
+  const task=await resp.json();
+  if(!resp.ok){
+   const message=String(task.detail||'API-fel');
+   if(/invalid token|unauthorized|401/i.test(message))throw Error('Agnes avvisade API-nyckeln. Kontrollera att AGNES_API_KEY är en aktiv nyckel från rätt Agnes-region i Render.');
+   if(resp.status===429)throw Error('NEXORA har en väntespärr eller Agnes rate limit. Vänta minst 70–90 sekunder innan nästa försök.');
+   throw Error(message);
+  }
   box.textContent='Uppdrag startat. Video-ID: '+task.video_id+'\nVäntar på generering…';
   for(let n=0;n<80;n++){
-   await new Promise(resolve=>setTimeout(resolve,7000));
-   const r=await fetch('/api/ai-video/'+encodeURIComponent(task.video_id));const state=await r.json();if(!r.ok)throw Error(state.detail||'Statusfel');
-   box.textContent='Status: '+state.status+(state.progress!=null?' · '+state.progress+'%':'')+'\nDet kan ta flera minuter. Låt sidan vara öppen.';
-   if(state.status==='completed'||state.url){if(!state.url)throw Error('Videon klar men ingen nedladdningslänk returnerades.');
-    const a=document.createElement('a');a.href=state.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent='▶ ÖPPNA / LADDA NER AI-VIDEO';a.style='display:block;color:#ff8791;font-weight:bold;font-size:17px;padding:14px 0';link.appendChild(a);box.textContent='KLART! Din AI-film är färdig.';return}
-   if(state.status==='failed'||state.status==='error')throw Error(state.error||'Videogenereringen misslyckades');
+   await sleep(7000);
+   const r=await fetch('/api/ai-video/'+encodeURIComponent(task.video_id));const state=await r.json();
+   if(!r.ok)throw Error(state.detail||'Kunde inte läsa videostatus.');
+   box.textContent='Status: '+state.status+(state.progress!=null?' · '+state.progress+'%':'')+'\nGenereringen kan ta flera minuter. Låt sidan vara öppen.';
+   if(state.status==='completed'||state.url){
+    if(!state.url)throw Error('Videon blev klar men Agnes returnerade ingen videolänk.');
+    const a=document.createElement('a');a.href=state.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent='▶ ÖPPNA / LADDA NER AI-VIDEO';link.appendChild(a);box.textContent='KLART! Din AI-film är färdig.';return;
+   }
+   if(state.status==='failed'||state.status==='error')throw Error(state.error||'Videogenereringen misslyckades.');
   }
-  box.textContent='Genereringen pågår fortfarande. Klicka inte på generera igen; vänta och kontrollera senare.';
- }catch(e){box.textContent='Kunde inte generera AI-film: '+e.message+'\nKontrollera att AGNES_API_KEY finns i Render och att gratis videokön är tillgänglig.'}
+  box.textContent='Videon bearbetas fortfarande. Vänta; starta inte ett nytt uppdrag.';
+ }catch(e){box.textContent='Kunde inte generera AI-film: '+e.message}
  finally{button.disabled=false}
 }
-async function checkAgnesVideo(){try{const r=await fetch('/api/ai-video/status'),j=await r.json();document.getElementById('aiVideoStatus').textContent=j.configured?'API anslutningsnyckel finns på servern. Gratis Flash 720P.':'Nästa steg: lägg in din NYA Agnes API-nyckel som AGNES_API_KEY i Render.'}catch(e){document.getElementById('aiVideoStatus').textContent='Backend-status kunde inte läsas.'}}
-
-loadProjects();status();checkAgnesVideo();
-</script></body></html>
+el('aiStart').addEventListener('click',startRealAiVideo);
+checkAgnesVideo();
+</script>
+</body>
+</html>
