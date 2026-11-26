@@ -3,6 +3,8 @@ import re, subprocess, uuid, json, shutil, os, time
 from typing import Optional, List
 import feedparser
 import requests
+from functools import wraps
+from threading import Lock
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -47,7 +49,9 @@ def read_projects():
 def write_projects(items): PROJECTS.write_text(json.dumps(items, ensure_ascii=False, indent=2), encoding="utf-8")
 def safe_media_path(raw):
     p = Path(raw).expanduser().resolve()
-    # Allow project media directory or explicit existing local files for single-user local installation.
+    # Never allow public requests to make FFmpeg read arbitrary server files.
+    try: p.relative_to(MEDIA.resolve())
+    except ValueError: raise HTTPException(400, "Choose a file uploaded through NEXORA.")
     if not p.exists() or not p.is_file(): raise HTTPException(404, "Media file not found.")
     return p
 
@@ -300,6 +304,7 @@ def _make_scene(path, headline, body, idx, niche, photo=None):
     im.save(path,quality=92)
 
 @app.post("/api/auto-create")
+@generation_guard(75)
 def auto_create(data: dict):
     prompt=str(data.get("prompt",""))[:700]
     niche=str(data.get("niche","Comedy"))[:80]
@@ -369,6 +374,7 @@ def auto_create(data: dict):
 
 
 @app.post("/api/render")
+@generation_guard(30)
 def render(project: VideoProject):
     if not shutil.which("ffmpeg"): raise HTTPException(500,"FFmpeg missing. Install FFmpeg and restart.")
     if not project.source_video: raise HTTPException(400,"Set source_video to a local file you own or are licensed to use.")
