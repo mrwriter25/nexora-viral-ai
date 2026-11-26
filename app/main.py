@@ -435,3 +435,75 @@ def publishing_requirements():
 
 app.mount("/outputs",StaticFiles(directory=str(OUT)),name="outputs")
 app.mount("/",StaticFiles(directory=str(BASE/"web"),html=True),name="web")
+
+
+# Agnes AI free-tier text-to-video integration. Secrets are read only server-side.
+AGNES_API_BASE = os.getenv("AGNES_API_BASE", "https://apihub.agnes-ai.com").rstrip("/")
+AGNES_VIDEO_MODEL = "agnes-video-2.5-flash"  # free 720P promo model; provider terms can change
+
+class AIVideoRequest(BaseModel):
+    prompt: str = Field(min_length=5, max_length=1800)
+    seconds: int = Field(default=5, ge=4, le=12)
+    aspect_ratio: str = Field(default="9:16", pattern=r"^(9:16|16:9|1:1|4:3|3:4|21:9)$")
+
+@app.get("/api/ai-video/status")
+def ai_video_status():
+    return {"configured": bool(os.getenv("AGNES_API_KEY")), "provider": "Agnes AI",
+            "model": AGNES_VIDEO_MODEL, "resolution": "720P",
+            "note": "Free Flash availability and promotional pricing may change at the provider."}
+
+@app.post("/api/ai-video/create")
+@generation_guard(70)
+def create_ai_video(request: AIVideoRequest):
+    key = os.getenv("AGNES_API_KEY", "").strip()
+    if not key:
+        raise HTTPException(503, "Agnes AI key is not configured. Add AGNES_API_KEY in Render Environment.")
+    payload = {"model": AGNES_VIDEO_MODEL, "prompt": request.prompt.strip(),
+               "mode": "text", "seconds": str(request.seconds), "size": "720P",
+               "aspect_ratio": request.aspect_ratio, "n": 1}
+    try:
+        response = requests.post(AGNES_API_BASE + "/v1/videos",
+            headers={"Authorization": "Bearer " + key, "Content-Type": "application/json"},
+            json=payload, timeout=55)
+    except requests.RequestException:
+        raise HTTPException(502, "Could not reach Agnes AI. Try again later.")
+    if response.status_code >= 400:
+        # Avoid returning provider headers or any credential-bearing request details.
+        try: detail = response.json().get("error", {}).get("message") or response.json().get("message")
+        except Exception: detail = None
+        if response.status_code == 429: raise HTTPException(429, "Agnes AI rate limit reached. Wait and retry.")
+        if response.status_code == 503: raise HTTPException(503, "Agnes AI video queue is busy. Retry later.")
+        raise HTTPException(502, str(detail or "Agnes AI rejected the video request")[:350])
+    try: result = response.json()
+    except ValueError: raise HTTPException(502, "Agnes AI returned an unreadable response.")
+    video_id = result.get("video_id") or result.get("id")
+    if not video_id:
+        raise HTTPException(502, "Provider did not return a video task ID.")
+    return {"status": result.get("status", "queued"), "video_id": str(video_id),
+            "model": AGNES_VIDEO_MODEL, "provider": "Agnes AI"}
+
+@app.get("/api/ai-video/{video_id}")
+def ai_video_result(video_id: str):
+    key = os.getenv("AGNES_API_KEY", "").strip()
+    if not key: raise HTTPException(503, "Agnes AI key is not configured in Render.")
+    if not re.fullmatch(r"[A-Za-z0-9_-]{3,180}", video_id):
+        raise HTTPException(400, "Invalid video task ID.")
+    try:
+        response = requests.get(AGNES_API_BASE + "/agnesapi",
+            params={"video_id": video_id, "model_name": AGNES_VIDEO_MODEL},
+            headers={"Authorization": "Bearer " + key}, timeout=35)
+    except requests.RequestException: raise HTTPException(502, "Could not check video status.")
+    if response.status_code >= 400:
+        if response.status_code == 429: raise HTTPException(429, "Provider rate limit. Wait before polling again.")
+        raise HTTPException(502, "Agnes AI status lookup failed.")
+    try: data = response.json()
+    except ValueError: raise HTTPException(502, "Provider returned an unreadable status.")
+    status_value = str(data.get("status", "processing")).lower()
+    output_url = data.get("url") or data.get("video_url")
+    if output_url:
+        # Accept only HTTPS links returned by the provider, never user-supplied URLs.
+        from urllib.parse import urlparse
+        parsed = urlparse(str(output_url))
+        if parsed.scheme != "https": output_url = None
+    return {"status": status_value, "progress": data.get("progress"),
+            "url": output_url, "error": str(data.get("error") or "")[:350]}
