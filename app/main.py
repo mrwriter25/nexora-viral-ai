@@ -336,14 +336,35 @@ def auto_create(data: dict):
     concat=scene_dir/"concat.txt"
     concat.write_text("".join(f"file '{p.as_posix()}'\n" for p in pieces),encoding="utf-8")
     final=OUT/f"{project_id}.mp4"
-    cmd=["ffmpeg","-y","-f","concat","-safe","0","-i",str(concat),"-t",str(duration),
-         "-c:v","libx264","-preset","ultrafast","-crf","25","-pix_fmt","yuv420p","-movflags","+faststart",str(final)]
+    # Burn readable timed captions and add free offline TTS when available.
+    srt=scene_dir/"captions.srt"
+    def stamp(seconds):
+        ms=int(max(0,seconds)*1000); hh=ms//3600000; mm=(ms%3600000)//60000; ss=(ms%60000)//1000; msec=ms%1000
+        return f"{hh:02d}:{mm:02d}:{ss:02d},{msec:03d}"
+    cap_lines=[]
+    for i,line in enumerate(narration):
+        cap_lines.append(f"{i+1}\\n{stamp(i*duration/len(narration))} --> {stamp((i+1)*duration/len(narration))}\\n{line}\\n")
+    srt.write_text("\\n".join(cap_lines),encoding="utf-8")
+    srt_filter=str(srt).replace("\\\\","/").replace(":","\\\\:")
+    narration_file=scene_dir/"narration.wav"
+    voice_ok=False
+    voice=["espeak-ng","-v", "sv" if lang.lower().startswith("sv") else "en", "-s","155","-w",str(narration_file)," ".join(narration)]
+    if shutil.which("espeak-ng"):
+        try: subprocess.run(voice,check=True,capture_output=True,timeout=45); voice_ok=True
+        except Exception: voice_ok=False
+    cmd=["ffmpeg","-y","-f","concat","-safe","0","-i",str(concat)]
+    if voice_ok: cmd += ["-i",str(narration_file)]
+    cmd += ["-t",str(duration),"-vf",f"subtitles='{srt_filter}',scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2",
+         "-c:v","libx264","-preset","ultrafast","-crf","25","-pix_fmt","yuv420p"]
+    if voice_ok: cmd += ["-map","0:v:0","-map","1:a:0","-c:a","aac","-b:a","128k","-shortest"]
+    else: cmd += ["-an"]
+    cmd += ["-movflags","+faststart",str(final)]
     try: subprocess.run(cmd,check=True,capture_output=True,timeout=240)
     except subprocess.CalledProcessError as e: raise HTTPException(500,"Video assembly failed: "+e.stderr.decode(errors="ignore")[-1200:])
     (scene_dir/"media_credits.json").write_text(json.dumps(scenes_credits,ensure_ascii=False,indent=2),encoding="utf-8")
     return {"status":"created","title":idea[:90],"idea":idea,"script":"\n".join(narration),
             "file":f"/outputs/{final.name}","format":"720x1280 MP4","duration":duration,
-            "visual_mode":"Automatically generated animated storyboard scenes. Not photorealistic AI video yet.",
+            "visual_mode":"Photographs sourced automatically from Wikimedia Commons where available, animated as scenes with timed captions; local synthesized narration is included when the server supports espeak-ng. Not generative moving footage.",
             "next":"Download and review your original generated storyboard short."}
 
 
