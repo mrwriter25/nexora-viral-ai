@@ -267,7 +267,7 @@ def _story_for(prompt, niche, lang, duration):
 # Free photographic scene assets from Wikimedia Commons; sources/licenses are saved with each export.
 def _commons_photo(query, destination):
     try:
-        terms = re.sub(r"[^\\w\\s-]", " ", query, flags=re.UNICODE)[:100].strip() or "cinematic photography"
+        terms = re.sub(r"[^\w\s-]", " ", query, flags=re.UNICODE)[:100].strip() or "cinematic photography"
         response = requests.get("https://commons.wikimedia.org/w/api.php", params={
             "action":"query","format":"json","generator":"search","gsrsearch":"filetype:bitmap "+terms,
             "gsrnamespace":6,"gsrlimit":8,"prop":"imageinfo","iiprop":"url|extmetadata","iiurlwidth":1000},
@@ -375,7 +375,7 @@ def auto_create(data: dict):
         return f"{hh:02d}:{mm:02d}:{ss:02d},{msec:03d}"
     cap_lines=[]
     for i,line in enumerate(narration):
-        cap_lines.append(f"{i+1}\\n{stamp(i*duration/len(narration))} --> {stamp((i+1)*duration/len(narration))}\\n{line}\\n")
+        cap_lines.append(f"{i+1}\n{stamp(i*duration/len(narration))} --> {stamp((i+1)*duration/len(narration))}\n{line}\n")
     srt.write_text("\\n".join(cap_lines),encoding="utf-8")
     srt_filter=str(srt).replace("\\\\","/").replace(":","\\:")
     narration_file=scene_dir/"narration.wav"
