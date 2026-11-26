@@ -11,7 +11,14 @@
 <button onclick="autoCreate()" style="width:100%;font-size:16px;padding:15px">✨ SKAPA VIDEO AUTOMATISKT</button>
 <pre id="autoResult">Redo. Ingen egen video behövs.</pre>
 </section>
-<div class="layout">
+
+<section class="card wide" id="realAiVideo" style="border-color:#ff3445;box-shadow:0 0 28px #ff34451a">
+<h2>🎬 REAL AI VIDEO — AGNES FREE 720P</h2>
+<p class="muted">Genererar rörlig AI-film direkt från text via Agnes AI:s Flash-gratismodell. 720p, 4–12 sekunder, vertikalt eller liggande. Gratiserbjudandet och kökapaciteten kan ändras hos leverantören.</p>
+<label>Beskriv filmklippet (prompt)</label><textarea id="aiPrompt" rows="4" placeholder="Photorealistic cinematic video: a Swedish red wooden cottage beside a lake at golden hour, gentle camera dolly, realistic natural motion..."></textarea>
+<div class="row"><div style="flex:1"><label>Klippets längd</label><select id="aiSeconds"><option value="5">5 sek</option><option value="6">6 sek</option><option value="8">8 sek</option><option value="10">10 sek</option><option value="12">12 sek</option><option value="4">4 sek</option></select></div><div style="flex:1"><label>Format</label><select id="aiRatio"><option value="9:16">9:16 TikTok/Reels</option><option value="16:9">16:9 YouTube</option><option value="1:1">1:1 Square</option></select></div></div>
+<button id="aiStart" onclick="startRealAiVideo()" style="width:100%;font-size:16px;padding:15px">✨ GENERERA RIKTIG AI-FILM</button><pre id="aiVideoStatus">Kontrollerar API-konfiguration…</pre><div id="aiVideoLink"></div>
+</section>\n<div class="layout">
 <section class="card"><h2>01 / CREATOR PROFILE</h2>
 <label>Niche</label><select id="niche"><option>Beauty & Makeup</option><option>Fashion</option><option>Sport & Fitness</option><option>Nightlife & Parties</option><option>Comedy</option><option>Action & Adventure</option><option>Horror</option><option>Romance</option></select>
 <label>Country code</label><input id="country" value="SE" maxlength="2"><label>Language code</label><input id="language" value="sv"><label>Region</label><input id="region" value="Stockholm"><label>Target audience</label><input id="audience" value="18+"><label>Video length (seconds)</label><input id="duration" type="number" min="10" max="180" value="30"><label>Tone / style</label><input id="tone" value="realistic, cinematic, engaging">
@@ -51,5 +58,28 @@ async function loadProjects(){try{let items=await(await fetch('/api/projects')).
 async function fillProject(id){let items=await(await fetch('/api/projects')).json(),x=items.find(p=>p.id===id);if(!x)return;for(let k of Object.keys(x))if(document.getElementById(k))document.getElementById(k).value=x[k]??'';subs.checked=!!x.subtitles}
 async function status(){status.textContent=JSON.stringify(await(await fetch('/api/status')).json(),null,2)}
 async function publishing(){publishInfo.textContent=JSON.stringify(await(await fetch('/api/publishing/requirements')).json(),null,2)}
-loadProjects();status();
+
+async function startRealAiVideo(){
+ const box=document.getElementById('aiVideoStatus'),button=document.getElementById('aiStart'),link=document.getElementById('aiVideoLink');
+ const prompt=document.getElementById('aiPrompt').value.trim();link.replaceChildren();
+ if(prompt.length<5){box.textContent='Skriv en mer detaljerad prompt först.';return}
+ button.disabled=true;box.textContent='Skickar videouppdrag till Agnes AI…';
+ try{
+  const resp=await fetch('/api/ai-video/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,seconds:Number(document.getElementById('aiSeconds').value),aspect_ratio:document.getElementById('aiRatio').value})});
+  const task=await resp.json();if(!resp.ok)throw Error(task.detail||'API-fel');
+  box.textContent='Uppdrag startat. Video-ID: '+task.video_id+'\nVäntar på generering…';
+  for(let n=0;n<80;n++){
+   await new Promise(resolve=>setTimeout(resolve,7000));
+   const r=await fetch('/api/ai-video/'+encodeURIComponent(task.video_id));const state=await r.json();if(!r.ok)throw Error(state.detail||'Statusfel');
+   box.textContent='Status: '+state.status+(state.progress!=null?' · '+state.progress+'%':'')+'\nDet kan ta flera minuter. Låt sidan vara öppen.';
+   if(state.status==='completed'||state.url){if(!state.url)throw Error('Videon klar men ingen nedladdningslänk returnerades.');
+    const a=document.createElement('a');a.href=state.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent='▶ ÖPPNA / LADDA NER AI-VIDEO';a.style='display:block;color:#ff8791;font-weight:bold;font-size:17px;padding:14px 0';link.appendChild(a);box.textContent='KLART! Din AI-film är färdig.';return}
+   if(state.status==='failed'||state.status==='error')throw Error(state.error||'Videogenereringen misslyckades');
+  }
+  box.textContent='Genereringen pågår fortfarande. Klicka inte på generera igen; vänta och kontrollera senare.';
+ }catch(e){box.textContent='Kunde inte generera AI-film: '+e.message+'\nKontrollera att AGNES_API_KEY finns i Render och att gratis videokön är tillgänglig.'}
+ finally{button.disabled=false}
+}
+async function checkAgnesVideo(){try{const r=await fetch('/api/ai-video/status'),j=await r.json();document.getElementById('aiVideoStatus').textContent=j.configured?'API anslutningsnyckel finns på servern. Gratis Flash 720P.':'Nästa steg: lägg in din NYA Agnes API-nyckel som AGNES_API_KEY i Render.'}catch(e){document.getElementById('aiVideoStatus').textContent='Backend-status kunde inte läsas.'}}
+\nloadProjects();status();checkAgnesVideo();
 </script></body></html>
