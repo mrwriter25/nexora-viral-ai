@@ -2,7 +2,7 @@ from pathlib import Path
 import re, subprocess, uuid, json, shutil, os, time
 from typing import Optional, List
 import feedparser
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
@@ -128,6 +128,189 @@ def plan(profile: Profile):
       ],
       "production_notes":"Use original footage, licensed assets, or AI-generated visuals. Add captions and check regional context."}
 
+@app.post("/api/upload/{kind}")
+async def upload_media(kind: str, file: UploadFile = File(...)):
+    if kind not in ("video", "audio"):
+        raise HTTPException(400, "Choose video or audio upload.")
+    allowed = {"video": {".mp4", ".mov", ".m4v", ".webm"}, "audio": {".mp3", ".wav", ".m4a", ".aac", ".ogg"}}
+    original = Path(file.filename or "upload.bin")
+    ext = original.suffix.lower()
+    if ext not in allowed[kind]:
+        raise HTTPException(400, f"Unsupported {kind} format: {ext}")
+    target = MEDIA / f"{uuid.uuid4().hex}{ext}"
+    limit = 120 * 1024 * 1024
+    total = 0
+    try:
+        with target.open("wb") as out:
+            while True:
+                chunk = await file.read(1024 * 1024)
+                if not chunk: break
+                total += len(chunk)
+                if total > limit:
+                    out.close()
+                    target.unlink(missing_ok=True)
+                    raise HTTPException(413, "File is over 120 MB. Choose a smaller clip.")
+                out.write(chunk)
+    finally:
+        await file.close()
+    return {"status": "uploaded", "path": str(target), "filename": original.name, "size_bytes": total}
+
+
+
+from PIL import Image, ImageDraw, ImageFont
+import random, math
+
+def _font(size, bold=False):
+    candidates = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "C:/Windows/Fonts/arialbd.ttf" if bold else "C:/Windows/Fonts/arial.ttf"
+    ]
+    for candidate in candidates:
+        try: return ImageFont.truetype(candidate, size)
+        except Exception: pass
+    return ImageFont.load_default()
+
+def _wrap(draw, text, font, max_width):
+    words = str(text).split()
+    lines, current = [], ""
+    for word in words:
+        test = (current + " " + word).strip()
+        if draw.textbbox((0,0), test, font=font)[2] <= max_width:
+            current = test
+        else:
+            if current: lines.append(current)
+            current = word
+    if current: lines.append(current)
+    return lines
+
+def _story_for(prompt, niche, lang, duration):
+    idea = (prompt or "").strip()
+    if not idea:
+        ideas = {
+            "Horror": ["En skugga syns i spegeln – men ingen står bakom huvudpersonen.",
+                       "Ett övergivet hus skickar ett meddelande från framtiden.",
+                       "Någon knackar tre gånger. Dörren har ingen utsida."],
+            "Comedy": ["En person försöker imponera på sin granne och allt går fel.",
+                       "En vanlig måndag blir en absurd tävling mot väckarklockan.",
+                       "Huvudpersonen följer ett viralt tips som får motsatt effekt."],
+            "Romance": ["Två främlingar missar nästan varandra på en regnig kväll.",
+                        "Ett gammalt meddelande dyker upp precis när det behövs."],
+            "Action & Adventure": ["En mystisk karta leder till en oväntad upptäckt.",
+                                  "En sista sekunds räddning förändrar hela uppdraget."],
+            "Sport & Fitness": ["En liten träningsutmaning blir dagens stora comeback.",
+                               "Tre enkla steg gör träningen mer fokuserad."],
+            "Beauty & Makeup": ["En snabb förvandling inför en oväntad kväll.",
+                                "En enkel rutin ger en snygg före-och-efter-känsla."],
+            "Fashion": ["Tre outfits, en enda detalj som förändrar hela looken.",
+                        "En garderobsutmaning med oväntad vinnare."],
+            "Nightlife & Parties": ["Kvällen börjar lugnt men får en komisk vändning.",
+                                    "Vännen som alltid säger 'bara en stund' blir kvällens huvudperson."]
+        }
+        options=ideas.get(niche,["En oväntad händelse förvandlar en helt vanlig dag."])
+        idea=random.choice(options)
+    is_sv=lang.lower().startswith("sv")
+    if is_sv:
+        beats=[
+            ("VÄNTA LITE…", "Allt började som en helt vanlig dag."),
+            ("NÅGOT ÄR FEL", idea),
+            ("DET BLIR VÄRRE", "Huvudpersonen försöker förstå vad som händer."),
+            ("VÄNDNINGEN", "Precis när allt verkar avgjort dyker en oväntad ledtråd upp."),
+            ("SLUTET", "Och det var först då den riktiga historien började.")
+        ]
+        narration=[f"Har du någonsin varit med om något så här? {idea}",
+                  "Först verkade allt helt normalt.",
+                  "Men snart började detaljerna inte stämma.",
+                  "En oväntad vändning förändrade allting.",
+                  "Vad hade du gjort? Skriv i kommentarerna."]
+    else:
+        beats=[
+            ("WAIT FOR IT…","It started like an ordinary day."),
+            ("SOMETHING IS OFF",idea),
+            ("IT GETS WORSE","The main character tries to understand what is happening."),
+            ("THE TWIST","Just when everything seems settled, a new clue appears."),
+            ("THE END","And that was when the real story began.")
+        ]
+        narration=[f"Have you ever experienced something like this? {idea}",
+                  "At first, everything seemed normal.",
+                  "Then the details stopped making sense.",
+                  "An unexpected twist changed everything.",
+                  "What would you do? Tell us below."]
+    return idea, beats, narration
+
+def _make_scene(path, headline, body, idx, niche):
+    W,H=720,1280
+    # cinematic vertical gradient
+    palettes={"Horror":((8,8,28),(105,12,40)),"Comedy":((20,30,70),(220,70,90)),
+              "Romance":((55,20,65),(220,90,130)),"Fashion":((20,20,28),(130,90,70)),
+              "Beauty & Makeup":((35,15,40),(180,70,110)),"Sport & Fitness":((5,45,55),(20,130,130)),
+              "Action & Adventure":((8,20,45),(150,55,25)),"Nightlife & Parties":((20,5,50),(80,20,120))}
+    top,bottom=palettes.get(niche,((10,15,35),(90,20,60)))
+    im=Image.new("RGB",(W,H)); pix=im.load()
+    for y in range(H):
+        t=y/(H-1)
+        c=tuple(int(top[k]*(1-t)+bottom[k]*t) for k in range(3))
+        for x in range(W): pix[x,y]=c
+    d=ImageDraw.Draw(im,"RGBA")
+    # soft luminous circles / abstract shapes
+    for j in range(9):
+        x=(j*137+idx*83)%W; y=(j*211+idx*149)%H; r=40+(j%4)*25
+        d.ellipse((x-r,y-r,x+r,y+r),fill=(255,255,255,12),outline=(255,255,255,24),width=3)
+    d.rounded_rectangle((44,60,W-44,H-60),radius=36,outline=(255,255,255,55),width=3)
+    tag="NEXORA • ORIGINAL STORY"
+    d.text((65,100),tag,font=_font(25,True),fill=(255,190,205,255))
+    headfont=_font(62,True); bodyfont=_font(36,False)
+    y=360
+    for line in _wrap(d,headline,headfont,W-120)[:4]:
+        d.text((60,y),line,font=headfont,fill="white",stroke_width=2,stroke_fill=(0,0,0,120)); y+=82
+    y+=25
+    for line in _wrap(d,body,bodyfont,W-120)[:7]:
+        d.text((62,y),line,font=bodyfont,fill=(255,225,230,255)); y+=54
+    d.text((62,H-145),f"SCENE {idx+1:02d}  /  SHORT FILM",font=_font(22,True),fill=(255,190,205,255))
+    im.save(path,quality=92)
+
+@app.post("/api/auto-create")
+def auto_create(data: dict):
+    prompt=str(data.get("prompt",""))[:700]
+    niche=str(data.get("niche","Comedy"))[:80]
+    lang=str(data.get("language","sv"))[:10]
+    country=str(data.get("country","SE"))[:8]
+    region=str(data.get("region",""))[:80]
+    try: duration=max(10,min(60,int(data.get("duration",30))))
+    except Exception: duration=30
+    if not shutil.which("ffmpeg"): raise HTTPException(500,"FFmpeg saknas på servern.")
+    project_id=uuid.uuid4().hex[:12]
+    scene_dir=OUT/project_id
+    scene_dir.mkdir(parents=True,exist_ok=True)
+    idea,beats,narration=_story_for(prompt,niche,lang,duration)
+    scenes=[]
+    for i,(head,body) in enumerate(beats):
+        img=scene_dir/f"scene_{i:02d}.jpg"
+        _make_scene(img,head,body,i,niche)
+        scenes.append(img)
+    # Compose each scene as a gentle zoom, then concatenate; no uploaded media required.
+    segment=max(2,duration/len(scenes))
+    pieces=[]
+    for i,img in enumerate(scenes):
+        part=scene_dir/f"part_{i:02d}.mp4"
+        cmd=["ffmpeg","-y","-loop","1","-i",str(img),"-t",str(segment),
+             "-vf",f"zoompan=z='min(zoom+0.0007,1.08)':d={int(segment*25)}:s=720x1280:fps=25,format=yuv420p",
+             "-an","-c:v","libx264","-preset","ultrafast","-crf","26",str(part)]
+        try: subprocess.run(cmd,check=True,capture_output=True,timeout=120)
+        except subprocess.CalledProcessError as e: raise HTTPException(500,"Scene render failed: "+e.stderr.decode(errors="ignore")[-900:])
+        pieces.append(part)
+    concat=scene_dir/"concat.txt"
+    concat.write_text("".join(f"file '{p.as_posix()}'\n" for p in pieces),encoding="utf-8")
+    final=OUT/f"{project_id}.mp4"
+    cmd=["ffmpeg","-y","-f","concat","-safe","0","-i",str(concat),"-t",str(duration),
+         "-c:v","libx264","-preset","ultrafast","-crf","25","-pix_fmt","yuv420p","-movflags","+faststart",str(final)]
+    try: subprocess.run(cmd,check=True,capture_output=True,timeout=240)
+    except subprocess.CalledProcessError as e: raise HTTPException(500,"Video assembly failed: "+e.stderr.decode(errors="ignore")[-1200:])
+    return {"status":"created","title":idea[:90],"idea":idea,"script":"\n".join(narration),
+            "file":f"/outputs/{final.name}","format":"720x1280 MP4","duration":duration,
+            "visual_mode":"Automatically generated animated storyboard scenes. Not photorealistic AI video yet.",
+            "next":"Download and review your original generated storyboard short."}
+
+
 @app.post("/api/render")
 def render(project: VideoProject):
     if not shutil.which("ffmpeg"): raise HTTPException(500,"FFmpeg missing. Install FFmpeg and restart.")
@@ -139,7 +322,7 @@ def render(project: VideoProject):
         # Render text as SRT then burn captions. Escaped path for FFmpeg filter.
         srt=OUT/(output.stem+".srt")
         text=project.script.strip().replace("--","—")
-        srt.write_text("1\\n00:00:00,000 --> 00:00:08,000\\n"+text[:450]+"\\n",encoding="utf-8")
+        srt.write_text("1\n00:00:00,000 --> 00:00:08,000\n"+text[:450]+"\n",encoding="utf-8")
         sp=str(srt).replace("\\\\","/").replace(":","\\\\:")
         vf += f",subtitles='{sp}'"
     cmd=["ffmpeg","-y","-i",str(src)]

@@ -1,36 +1,14 @@
-# NEXORA VIRAL AI v1.0 — local-first creator studio
+# NEXORA VIRAL AI — Auto Creator v1.1
 
-## Start
-Prerequisites: Python 3.11+, FFmpeg.
-```bash
-python -m venv .venv
-# Windows: .venv\Scripts\activate
-# macOS/Linux: source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --host 127.0.0.1 --port 8000
-```
-Open http://127.0.0.1:8000
+This build adds a **Create Video Automatically** workflow. A user enters a prompt (or leaves it blank), chooses a niche/language/duration, and the server creates an original short concept, a simple script, animated illustrated scene cards, and an MP4 without requiring user footage.
 
-## Docker
-```bash
-docker build -t nexora-viral-ai .
-docker run --rm -p 8000:8000 -v "$(pwd)/outputs:/app/outputs" -v "$(pwd)/media:/app/media" nexora-viral-ai
-```
+## Honest capability note
+This is a generated animated storyboard/video prototype. It is **not yet photorealistic text-to-video AI**. Real generative video requires connecting a video-generation model/provider or deploying an open model on GPU infrastructure. The public free Render instance is not suitable for running a large video diffusion model.
 
-## Current working features
-- Web dashboard
-- Profile settings: niche, country, language, region, audience and style
-- Public RSS headline discovery for selected country profiles
-- Creative brief and short-form story structure
-- Save/load projects
-- FFmpeg vertical MP4 rendering from local owned/licensed video
-- Optional external audio and subtitle burn-in
-- Publishing requirements endpoint
+## Deploy
+Deploy the repository to Render as a Docker Web Service. Docker installs FFmpeg; Python dependencies include Pillow for scene artwork.
 
-## Publishing and public deployment
-Direct TikTok and YouTube publishing is not switched on: platform developer app registration, OAuth authorization, review/permissions and secrets are account-specific. Set up those credentials server-side before enabling publishing. The app intentionally does not scrape or repost copyrighted creator videos.
+## Usage
+Open the public URL, enter an idea or leave it blank, choose profile settings, then press **SKAPA VIDEO AUTOMATISKT**. When finished, open/download the MP4 link.
 
-A publicly hosted multi-user service needs authentication, per-user file isolation, rate limiting, task queue, storage lifecycle, secure OAuth token encryption, moderation and abuse controls. The starter is suitable for local use and private deployment, not an unrestricted public SaaS as-is.
-
-## AI video generation
-This package has a working editor/rendering pipeline, but not a bundled video-generation model. Truly free generation can be run locally through a compatible open model and ComfyUI, but requires suitable hardware and model downloads. No model or cloud GPU is promised as free/unlimited.
+The app also retains its earlier planning, RSS discovery, upload/render, project library and platform publishing-requirements routes. TikTok/YouTube publishing is not activated without official OAuth setup.
