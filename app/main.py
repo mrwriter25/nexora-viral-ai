@@ -20,6 +20,28 @@ if not PROJECTS.exists(): PROJECTS.write_text("[]", encoding="utf-8")
 
 app = FastAPI(title="NEXORA VIRAL AI", version="1.0.0")
 
+# Protect the free hosting instance from overlapping expensive FFmpeg jobs.
+_generation_lock = Lock()
+_generation_last_started = {}
+
+def generation_guard(cooldown_seconds: int):
+    def decorate(func):
+        @wraps(func)
+        def wrapped(*args, **kwargs):
+            now = time.monotonic()
+            previous = _generation_last_started.get(func.__name__, 0)
+            if now - previous < cooldown_seconds:
+                raise HTTPException(429, "Please wait before starting another video job.")
+            if not _generation_lock.acquire(blocking=False):
+                raise HTTPException(429, "A video job is already running. Try again shortly.")
+            _generation_last_started[func.__name__] = now
+            try:
+                return func(*args, **kwargs)
+            finally:
+                _generation_lock.release()
+        return wrapped
+    return decorate
+
 class Profile(BaseModel):
     niche: str = "Comedy"
     country: str = "SE"
