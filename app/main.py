@@ -433,8 +433,7 @@ def publishing_requirements():
       "reason":"Publishing is not activated until the owner supplies their own approved OAuth credentials. Never expose secrets in frontend code."
     }
 
-app.mount("/outputs",StaticFiles(directory=str(OUT)),name="outputs")
-app.mount("/",StaticFiles(directory=str(BASE/"web"),html=True),name="web")
+# Static mounts are registered at the very end, after all API routes.
 
 
 # Agnes AI free-tier text-to-video integration. Secrets are read only server-side.
@@ -507,3 +506,6 @@ def ai_video_result(video_id: str):
         if parsed.scheme != "https": output_url = None
     return {"status": status_value, "progress": data.get("progress"),
             "url": output_url, "error": str(data.get("error") or "")[:350]}
+
+app.mount("/outputs",StaticFiles(directory=str(OUT)),name="outputs")
+app.mount("/",StaticFiles(directory=str(BASE/"web"),html=True),name="web")
