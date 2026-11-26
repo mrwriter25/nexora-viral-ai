@@ -54,9 +54,9 @@ async function discover(){discovery.textContent='Fetching…';try{discovery.text
 async function plan(){try{let p=await post('/api/plan',profile());idea.value=p.creative_brief;script.value=p.structure.map(x=>x.time+' — '+x.purpose).join('\n');caption.value='Original '+profile().niche+' short | '+profile().region;hashtags.value='#shorts #'+profile().niche.replaceAll(' ','')}catch(e){alert(e.message)}}
 async function render(){renderResult.textContent='Rendering locally…';try{let j=await post('/api/render',project());renderResult.textContent=JSON.stringify(j,null,2);if(j.file)renderResult.innerHTML+='\\n<a style="color:#ff8791" href="'+j.file+'" target="_blank">Open/download rendered MP4</a>'}catch(e){renderResult.textContent=e.message}}
 async function saveProject(){try{let j=await post('/api/projects',project());alert('Saved project '+j.id);loadProjects()}catch(e){alert(e.message)}}
-async function loadProjects(){try{let items=await(await fetch('/api/projects')).json();projects.innerHTML=items.map(x=>`<div class="project"><span>${x.title} <small>${x.niche} · ${x.country}</small></span><button class="alt" onclick="fillProject('${x.id}')">Load</button></div>`).join('')||'No saved projects'}catch(e){projects.textContent=e.message}}
+async function loadProjects(){const list=document.getElementById('projects');try{let items=await(await fetch('/api/projects')).json();list.innerHTML=items.map(x=>`<div class="project"><span>${x.title} <small>${x.niche} · ${x.country}</small></span><button class="alt" onclick="fillProject('${x.id}')">Load</button></div>`).join('')||'No saved projects'}catch(e){list.textContent=e.message}}
 async function fillProject(id){let items=await(await fetch('/api/projects')).json(),x=items.find(p=>p.id===id);if(!x)return;for(let k of Object.keys(x))if(document.getElementById(k))document.getElementById(k).value=x[k]??'';subs.checked=!!x.subtitles}
-async function status(){status.textContent=JSON.stringify(await(await fetch('/api/status')).json(),null,2)}
+async function status(){const box=document.getElementById('status');try{const r=await fetch('/api/status');if(!r.ok)throw Error('HTTP '+r.status);box.textContent=JSON.stringify(await r.json(),null,2)}catch(e){box.textContent='Backendfel: '+e.message}}
 async function publishing(){publishInfo.textContent=JSON.stringify(await(await fetch('/api/publishing/requirements')).json(),null,2)}
 
 async function startRealAiVideo(){
@@ -81,5 +81,6 @@ async function startRealAiVideo(){
  finally{button.disabled=false}
 }
 async function checkAgnesVideo(){try{const r=await fetch('/api/ai-video/status'),j=await r.json();document.getElementById('aiVideoStatus').textContent=j.configured?'API anslutningsnyckel finns på servern. Gratis Flash 720P.':'Nästa steg: lägg in din NYA Agnes API-nyckel som AGNES_API_KEY i Render.'}catch(e){document.getElementById('aiVideoStatus').textContent='Backend-status kunde inte läsas.'}}
-\nloadProjects();status();checkAgnesVideo();
+
+loadProjects();status();checkAgnesVideo();
 </script></body></html>

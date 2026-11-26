@@ -267,7 +267,7 @@ def _story_for(prompt, niche, lang, duration):
 # Free photographic scene assets from Wikimedia Commons; sources/licenses are saved with each export.
 def _commons_photo(query, destination):
     try:
-        terms = re.sub(r"[^\\w\\s-]", " ", query, flags=re.UNICODE)[:100].strip() or "cinematic photography"
+        terms = re.sub(r"[^\w\s-]", " ", query, flags=re.UNICODE)[:100].strip() or "cinematic photography"
         response = requests.get("https://commons.wikimedia.org/w/api.php", params={
             "action":"query","format":"json","generator":"search","gsrsearch":"filetype:bitmap "+terms,
             "gsrnamespace":6,"gsrlimit":8,"prop":"imageinfo","iiprop":"url|extmetadata","iiurlwidth":1000},
@@ -302,11 +302,16 @@ def _make_scene(path, headline, body, idx, niche, photo=None):
             im=ImageEnhance.Brightness(ImageEnhance.Color(im).enhance(1.1)).enhance(0.55)
         except Exception: im=None
     if im is None:
-        im=Image.new("RGB",(W,H)); pix=im.load()
-    for y in range(H):
-        t=y/(H-1)
-        c=tuple(int(top[k]*(1-t)+bottom[k]*t) for k in range(3))
-        for x in range(W): pix[x,y]=c
+        im=Image.new("RGB",(W,H))
+        pix=im.load()
+        for y in range(H):
+            t=y/(H-1)
+            c=tuple(int(top[k]*(1-t)+bottom[k]*t) for k in range(3))
+            for x in range(W): pix[x,y]=c
+    else:
+        # Darken the photo evenly for legible overlaid text without replacing it.
+        from PIL import ImageEnhance
+        im=ImageEnhance.Brightness(im).enhance(0.48)
     d=ImageDraw.Draw(im,"RGBA")
     # soft luminous circles / abstract shapes
     for j in range(9):
@@ -370,9 +375,9 @@ def auto_create(data: dict):
         return f"{hh:02d}:{mm:02d}:{ss:02d},{msec:03d}"
     cap_lines=[]
     for i,line in enumerate(narration):
-        cap_lines.append(f"{i+1}\\n{stamp(i*duration/len(narration))} --> {stamp((i+1)*duration/len(narration))}\\n{line}\\n")
+        cap_lines.append(f"{i+1}\n{stamp(i*duration/len(narration))} --> {stamp((i+1)*duration/len(narration))}\n{line}\n")
     srt.write_text("\\n".join(cap_lines),encoding="utf-8")
-    srt_filter=str(srt).replace("\\\\","/").replace(":","\\\\:")
+    srt_filter=str(srt).replace("\\\\","/").replace(":","\\:")
     narration_file=scene_dir/"narration.wav"
     voice_ok=False
     voice=["espeak-ng","-v", "sv" if lang.lower().startswith("sv") else "en", "-s","155","-w",str(narration_file)," ".join(narration)]
@@ -408,7 +413,7 @@ def render(project: VideoProject):
         srt=OUT/(output.stem+".srt")
         text=project.script.strip().replace("--","—")
         srt.write_text("1\n00:00:00,000 --> 00:00:08,000\n"+text[:450]+"\n",encoding="utf-8")
-        sp=str(srt).replace("\\\\","/").replace(":","\\\\:")
+        sp=str(srt).replace("\\\\","/").replace(":","\\:")
         vf += f",subtitles='{sp}'"
     cmd=["ffmpeg","-y","-i",str(src)]
     if project.source_audio:
