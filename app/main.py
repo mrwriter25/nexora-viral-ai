@@ -469,26 +469,45 @@ def gaming_content_plan(data: dict = None):
             if time.time() - float(x.get("created_at", 0)) < 30 * 86400}
     candidates = []
     feed_errors = []
+    from urllib.parse import urlparse
+    from datetime import datetime, timezone
+    import calendar
     for feed_url in GAMING_FEEDS:
         try:
             parsed = feedparser.parse(feed_url)
-            for entry in parsed.entries[:20]:
+            if getattr(parsed, "bozo", False) and not parsed.entries:
+                feed_errors.append(feed_url)
+                continue
+            for entry in parsed.entries[:25]:
                 title = re.sub(r"<[^>]+>", "", str(entry.get("title", ""))).strip()
-                if not title: continue
+                article_url = str(entry.get("link", "")).strip()
+                if not title or not article_url.startswith("https://"): continue
                 key = _gaming_topic_key(title)
                 if key in seen: continue
+                published = entry.get("published_parsed") or entry.get("updated_parsed")
+                published_iso = None
+                age_hours = 72.0
+                if published:
+                    published_ts = calendar.timegm(published)
+                    published_iso = datetime.fromtimestamp(published_ts, timezone.utc).isoformat()
+                    age_hours = max(0, (time.time() - published_ts) / 3600)
+                    # Reject stale stories; an old article must never be sold as a current trend.
+                    if age_hours > 7 * 24: continue
+                domain = (urlparse(article_url).hostname or "").lower()
                 points = sum(3 for word in GAMING_HYPE if word in title.lower())
-                if entry.get("published_parsed"):
-                    age_hours = max(0, (time.time() - time.mktime(entry.published_parsed)) / 3600)
-                    points += max(0, 5 - age_hours / 24)
-                candidates.append({"title": title, "url": str(entry.get("link", "")),
-                                  "source": parsed.feed.get("title", "Gaming RSS"), "score": points})
+                points += max(0, 5 - age_hours / 24)
+                candidates.append({"title": title, "url": article_url,
+                                  "source": parsed.feed.get("title") or domain,
+                                  "source_domain": domain, "published_at": published_iso,
+                                  "score": round(points, 2), "evidence_type": "rss_article"})
         except Exception:
             feed_errors.append(feed_url)
-    candidates.sort(key=lambda x: x["score"], reverse=True)
-    trend = candidates[0] if candidates else {
-        "title": "The gaming moment everyone should watch",
-        "url": "", "source": "NEXORA evergreen fallback", "score": 0}
+    candidates.sort(key=lambda x: (x["score"], x.get("published_at") or ""), reverse=True)
+    has_verified_source = bool(candidates)
+    trend = candidates[0] if has_verified_source else {
+        "title": "Ingen färsk gamingartikel kunde verifieras",
+        "url": "", "source": "NEXORA – ingen verifierad källa", "source_domain": "",
+        "published_at": None, "score": 0, "evidence_type": "no_verified_source"}
     topic = trend["title"]
     is_sv = language.startswith("sv")
     if is_sv:
@@ -518,16 +537,16 @@ def gaming_content_plan(data: dict = None):
               for i,(beat,line,visual) in enumerate(scene_texts)]
     full_prompt = "Create a vertical 9:16 gaming short, " + str(duration) + " seconds. Topic: " + topic + ". " + " ".join(x["visual_prompt"] for x in scenes) + " Fast-paced edit, bold Swedish gaming subtitles, energetic natural voiceover."
     plan_data = {"topic": topic, "trend_source": trend["source"], "source_url": trend["url"],
-                 "trend_score": trend["score"], "hook": hook, "script": script,
+                 "trend_score": trend["score"], "source_domain": trend.get("source_domain", ""),\n                 "published_at": trend.get("published_at"), "evidence_type": trend.get("evidence_type"),\n                 "source_verified": has_verified_source, "hook": hook, "script": script,
                  "scenes": scenes, "duration_seconds": duration, "aspect_ratio": "9:16",
                  "title": title, "caption": caption, "hashtags": ["#Gaming", "#GamingNews", "#Gamer", "#Roblox", "#GTA6"],
                  "agnes_prompt": full_prompt, "quality_check": {"under_60_seconds": True,
                  "vertical_9_16": True, "placeholder_text": False},
                  "publishing": "Auto-upload is not enabled: connect and authorize official platform APIs first.",
-                 "scouting_note": "RSS trend discovery; verify news and avoid treating rumors as confirmed facts.",
+                 "scouting_note": "Riktiga RSS-artiklar med publiceringsdatum och länk. RSS-urval är inte bevis på TikTok-viralitet; kontrollera rykten mot primärkälla.",
                  "feed_errors": len(feed_errors)}
     history = _gaming_history()
-    history.insert(0, {"topic": topic, "hook": hook, "created_at": time.time(), "status": "planned"})
+    if has_verified_source:\n        history.insert(0, {"topic": topic, "hook": hook, "source_url": trend["url"], "created_at": time.time(), "status": "planned"})
     GAMING_HISTORY.write_text(json.dumps(history[:100], ensure_ascii=False, indent=2), encoding="utf-8")
     return plan_data
 
