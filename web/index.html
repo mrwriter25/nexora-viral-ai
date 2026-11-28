@@ -33,7 +33,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#09090c;border:1px so
 <div class="gaming-autopilot" style="margin:18px 0;padding:16px;border:1px solid #6b2b38;border-radius:12px;background:#100d12">
 <strong style="color:#ff8791">🎮 GAMING AUTOPILOT — TREND → SCRIPT → SCENES</strong>
 <p class="muted">Scoutar gamingnyheter, välja ett ämne, skriva hook/manus och skapa 4 visuella scenprompts. Planen fyller Agnes-prompten automatiskt.</p>
-<button id="gamingScout" type="button" class="alt" style="width:100%">⚡ SCOUTA TRENDER & SKAPA CONTENT-PLAN</button>
+<button id="gamingScout" type="button" class="alt" style="width:100%">⚡ STARTA GAMING AUTOPILOT — TREND + AI-VIDEO</button>
 <pre id="gamingPlan">Gaming autopilot redo. Klicka för att hitta ett ämne.</pre>
 </div>
 <p>Genererar rörlig AI-film direkt från text via Agnes AI:s Flash-modell. 720p, 4–12 sekunder. Gratiserbjudandet och kökapaciteten kan ändras hos leverantören.</p>
@@ -95,7 +95,8 @@ async function scoutGaming(){
   const r=await fetch('/api/gaming/plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({language:'sv',duration:30})});
   const p=await r.json();if(!r.ok)throw Error(p.detail||'Trend-scout misslyckades');
   document.getElementById('aiPrompt').value=p.agnes_prompt;
-  out.textContent='TREND: '+p.topic+'\\nKÄLLA: '+p.trend_source+'\\n\\nHOOK: '+p.hook+'\\n\\nMANUS:\\n'+p.script.join('\\n')+'\\n\\nSCENER:\\n'+p.scenes.map(s=>'SCENE '+s.scene+' — '+s.beat+'\\n'+s.visual_prompt).join('\\n\\n')+'\\n\\nTITEL: '+p.title+'\\nCAPTION: '+p.caption+'\\nHASHTAGS: '+p.hashtags.join(' ')+'\\n\\nQC: 9:16 · '+p.duration_seconds+'s · inga placeholders\\n\\nAgnes-prompten är ifylld. Granska och klicka sedan Generera AI-film.';
+  out.textContent='TREND: '+p.topic+'\\nKÄLLA: '+p.trend_source+'\\n\\nHOOK: '+p.hook+'\\n\\nMANUS:\\n'+p.script.join('\\n')+'\\n\\nSCENER:\\n'+p.scenes.map(s=>'SCENE '+s.scene+' — '+s.beat+'\\n'+s.visual_prompt).join('\\n\\n')+'\\n\\nTITEL: '+p.title+'\\nCAPTION: '+p.caption+'\\nHASHTAGS: '+p.hashtags.join(' ')+'\\n\\nQC: 9:16 · '+p.duration_seconds+'s · inga placeholders\\n\\nAgnes-prompten är ifylld. QC godkänd: under 60 sek, 9:16, inga placeholders. Startar Agnes-genereringen automatiskt…';
+  await startRealAiVideo();
  }catch(e){out.textContent='Autopilotfel: '+e.message}
  finally{btn.disabled=false}
 }
