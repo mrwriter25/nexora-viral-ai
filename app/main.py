@@ -539,7 +539,9 @@ def gaming_content_plan(data: dict = None):
               for i,(beat,line,visual) in enumerate(scene_texts)]
     full_prompt = "Create a vertical 9:16 gaming short, " + str(duration) + " seconds. Topic: " + topic + ". " + " ".join(x["visual_prompt"] for x in scenes) + " Fast-paced edit, bold Swedish gaming subtitles, energetic natural voiceover."
     plan_data = {"topic": topic, "trend_source": trend["source"], "source_url": trend["url"],
-                 "trend_score": trend["score"], "source_domain": trend.get("source_domain", ""),\n                 "published_at": trend.get("published_at"), "evidence_type": trend.get("evidence_type"),\n                 "source_verified": has_verified_source, "hook": hook, "script": script,
+                 "trend_score": trend["score"], "source_domain": trend.get("source_domain", ""),
+                 "published_at": trend.get("published_at"), "evidence_type": trend.get("evidence_type"),
+                 "source_verified": has_verified_source, "hook": hook, "script": script,
                  "scenes": scenes, "duration_seconds": duration, "aspect_ratio": "9:16",
                  "title": title, "caption": caption, "hashtags": ["#Gaming", "#GamingNews", "#Gamer", "#Roblox", "#GTA6"],
                  "agnes_prompt": full_prompt, "quality_check": {"under_60_seconds": True,
@@ -548,7 +550,8 @@ def gaming_content_plan(data: dict = None):
                  "scouting_note": "Riktiga RSS-artiklar med publiceringsdatum och länk. RSS-urval är inte bevis på TikTok-viralitet; kontrollera rykten mot primärkälla.",
                  "feed_errors": len(feed_errors)}
     history = _gaming_history()
-    if has_verified_source:\n        history.insert(0, {"topic": topic, "hook": hook, "source_url": trend["url"], "created_at": time.time(), "status": "planned"})
+    if has_verified_source:
+        history.insert(0, {"topic": topic, "hook": hook, "source_url": trend["url"], "created_at": time.time(), "status": "planned"})
     GAMING_HISTORY.write_text(json.dumps(history[:100], ensure_ascii=False, indent=2), encoding="utf-8")
     return plan_data
 
