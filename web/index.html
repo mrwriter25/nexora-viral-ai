@@ -61,8 +61,11 @@ async function startRealAiVideo(){
  const box=el('aiVideoStatus'),button=el('aiStart'),link=el('aiVideoLink'),prompt=el('aiPrompt').value.trim();
  link.replaceChildren();
  if(prompt.length<5){box.textContent='Skriv en tydligare prompt (minst 5 tecken).';return}
- button.disabled=true;box.textContent='Skickar uppdrag till Agnes AI…';
+ button.disabled=true;box.textContent='Kontrollerar Agnes-konfiguration…';
  try{
+  const check=await fetch('/api/ai-video/status');const config=await check.json();
+  if(!check.ok||!config.configured)throw Error('AGNES_API_KEY saknas i Render Environment. Lägg in en giltig Agnes API-nyckel under Render → Environment och redeploya. Ingen videobegäran skickades.');
+  box.textContent='API-nyckel finns. Skickar uppdrag till Agnes AI…';
   const resp=await fetch('/api/ai-video/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,seconds:Number(el('aiSeconds').value),aspect_ratio:el('aiRatio').value})});
   const task=await resp.json();
   if(!resp.ok){
