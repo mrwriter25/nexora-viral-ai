@@ -105,8 +105,12 @@ async function scoutGaming(){
  try{
   const r=await fetch('/api/gaming/plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({language:'sv',duration:30})});
   const p=await r.json();if(!r.ok)throw Error(p.detail||'Trend-scout misslyckades');
+  if(!p.source_verified||!p.source_url){
+   out.textContent='STOPP: Ingen färsk artikel med verifierbar HTTPS-källa hittades. NEXORA startar inte en gamingnyhetsvideo från ett påhittat ämne. Prova igen senare eller skriv ett eget ämne manuellt.';
+   return;
+  }
   document.getElementById('aiPrompt').value=p.agnes_prompt;
-  out.textContent='TREND: '+p.topic+'\\nKÄLLA: '+p.trend_source+'\\n\\nHOOK: '+p.hook+'\\n\\nMANUS:\\n'+p.script.join('\\n')+'\\n\\nSCENER:\\n'+p.scenes.map(s=>'SCENE '+s.scene+' — '+s.beat+'\\n'+s.visual_prompt).join('\\n\\n')+'\\n\\nTITEL: '+p.title+'\\nCAPTION: '+p.caption+'\\nHASHTAGS: '+p.hashtags.join(' ')+'\\n\\nQC: 9:16 · '+p.duration_seconds+'s · inga placeholders\\n\\nAgnes-prompten är ifylld. QC godkänd: under 60 sek, 9:16, inga placeholders. Startar Agnes-genereringen automatiskt…';
+  out.textContent='VERIFIERAD RSS-ARTIKEL\\nÄMNE: '+p.topic+'\\nKÄLLA: '+p.trend_source+' ('+p.source_domain+')\\nPUBLICERAD: '+(p.published_at||'datum saknas i feed')+'\\nORIGINALLÄNK: '+p.source_url+'\\n\\nHOOK: '+p.hook+'\\n\\nMANUS:\\n'+p.script.join('\\n')+'\\n\\nSCENER:\\n'+p.scenes.map(s=>'SCENE '+s.scene+' — '+s.beat+'\\n'+s.visual_prompt).join('\\n\\n')+'\\n\\nTITEL: '+p.title+'\\nCAPTION: '+p.caption+'\\nHASHTAGS: '+p.hashtags.join(' ')+'\\n\\nQC: 9:16 · '+p.duration_seconds+'s · inga placeholders\\n\\nAgnes-prompten är ifylld. QC godkänd: under 60 sek, 9:16, inga placeholders. Startar Agnes-genereringen automatiskt…';
   await startRealAiVideo();
  }catch(e){out.textContent='Autopilotfel: '+e.message}
  finally{btn.disabled=false}
