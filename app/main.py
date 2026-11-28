@@ -569,8 +569,13 @@ def create_ai_video(request: AIVideoRequest):
         # Avoid returning provider headers or any credential-bearing request details.
         try: detail = response.json().get("error", {}).get("message") or response.json().get("message")
         except Exception: detail = None
-        if response.status_code == 429: raise HTTPException(429, "Agnes AI rate limit reached. Wait and retry.")
-        if response.status_code == 503: raise HTTPException(503, "Agnes AI video queue is busy. Retry later.")
+        if response.status_code == 429:
+            raise HTTPException(429, "Agnes AI rate limit reached. Provider is throttling requests; wait before retrying.")
+        if response.status_code == 503:
+            # Keep the provider's sanitized error message visible. This helps
+            # distinguish an overloaded queue from account/maintenance issues.
+            provider_detail = str(detail or "Agnes AI video queue is temporarily unavailable.")
+            raise HTTPException(503, "Agnes AI temporarily unavailable: " + provider_detail[:250])
         raise HTTPException(502, str(detail or "Agnes AI rejected the video request")[:350])
     try: result = response.json()
     except ValueError: raise HTTPException(502, "Agnes AI returned an unreadable response.")
