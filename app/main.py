@@ -485,6 +485,8 @@ def gaming_content_plan(data: dict = None):
                 key = _gaming_topic_key(title)
                 if key in seen: continue
                 published = entry.get("published_parsed") or entry.get("updated_parsed")
+                # A current-trend label requires an explicit feed timestamp.
+                if not published: continue
                 published_iso = None
                 age_hours = 72.0
                 if published:
