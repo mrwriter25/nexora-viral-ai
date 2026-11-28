@@ -438,6 +438,96 @@ def publishing_requirements():
       "reason":"Publishing is not activated until the owner supplies their own approved OAuth credentials. Never expose secrets in frontend code."
     }
 
+
+# Gaming trend scout + short-form content planner. RSS-based; no paid AI required.
+GAMING_HISTORY = DATA / "gaming_history.json"
+GAMING_FEEDS = [
+    "https://news.google.com/rss/search?q=gaming+GTA+Roblox+game+trailer+when:7d&hl=en-US&gl=US&ceid=US:en",
+    "https://news.google.com/rss/search?q=video+games+release+gaming+memes+when:7d&hl=en-US&gl=US&ceid=US:en",
+    "https://www.ign.com/rss"
+]
+GAMING_HYPE = ("gta 6", "gta vi", "roblox", "fortnite", "minecraft", "viral", "trailer",
+                "release", "update", "leak", "gaming", "gameplay", "steam", "indie", "meme")
+
+def _gaming_history():
+    try: return json.loads(GAMING_HISTORY.read_text(encoding="utf-8"))
+    except Exception: return []
+
+def _gaming_topic_key(text):
+    return re.sub(r"[^a-z0-9]+", " ", str(text).lower()).strip()[:180]
+
+@app.post("/api/gaming/plan")
+def gaming_content_plan(data: dict = None):
+    data = data or {}
+    language = str(data.get("language", "sv"))[:12].lower()
+    duration = max(15, min(45, int(data.get("duration", 30) or 30)))
+    seen = {_gaming_topic_key(x.get("topic", "")) for x in _gaming_history()
+            if time.time() - float(x.get("created_at", 0)) < 30 * 86400}
+    candidates = []
+    feed_errors = []
+    for feed_url in GAMING_FEEDS:
+        try:
+            parsed = feedparser.parse(feed_url)
+            for entry in parsed.entries[:20]:
+                title = re.sub(r"<[^>]+>", "", str(entry.get("title", ""))).strip()
+                if not title: continue
+                key = _gaming_topic_key(title)
+                if key in seen: continue
+                points = sum(3 for word in GAMING_HYPE if word in title.lower())
+                if entry.get("published_parsed"):
+                    age_hours = max(0, (time.time() - time.mktime(entry.published_parsed)) / 3600)
+                    points += max(0, 5 - age_hours / 24)
+                candidates.append({"title": title, "url": str(entry.get("link", "")),
+                                  "source": parsed.feed.get("title", "Gaming RSS"), "score": points})
+        except Exception:
+            feed_errors.append(feed_url)
+    candidates.sort(key=lambda x: x["score"], reverse=True)
+    trend = candidates[0] if candidates else {
+        "title": "The gaming moment everyone should watch",
+        "url": "", "source": "NEXORA evergreen fallback", "score": 0}
+    topic = trend["title"]
+    is_sv = language.startswith("sv")
+    if is_sv:
+        hook = f"Gamingvärlden snackar om: {topic} — men här är detaljen du kanske missade."
+        script = [f"Stopp scrollen! {topic}.",
+                  "Det här är varför gamers pratar om det just nu.",
+                  "Kolla särskilt på den här detaljen — den kan ändra hela upplevelsen.",
+                  "Vad tycker du? Hype eller överdrivet? Skriv din take i kommentarerna."]
+        title = f"{topic[:70]} – gamingnyheten du inte får missa"
+        caption = "Är detta nästa stora gaming-moment? Kommentera din åsikt!"
+    else:
+        hook = f"Gamers are talking about {topic} — here's the detail you may have missed."
+        script = [f"Stop scrolling! {topic}.",
+                  "Here's why gamers are talking about it right now.",
+                  "Watch this detail — it could change the whole experience.",
+                  "Hype or overreaction? Drop your take in the comments."]
+        title = f"{topic[:70]} — the gaming update you need"
+        caption = "Is this the next big gaming moment? Tell us in the comments!"
+    scene_texts = [
+        ("HOOK / 0–3s", hook, "Extreme close-up of a gaming setup, dramatic monitor glow, quick push-in, high contrast, vertical 9:16, original visuals, no logos or readable fake UI."),
+        ("CONTEXT", script[1], "Fast cinematic montage of generic gaming environments and controller details, energetic handheld camera, red and cyan rim lighting, consistent creator style, vertical 9:16."),
+        ("DETAIL / PAYOFF", script[2], "Macro shot of a game-inspired fictional scene with dynamic camera orbit and atmospheric particles, no copied copyrighted footage, vertical 9:16."),
+        ("CTA", script[3], "Streamer-style silhouette reacting to a glowing screen, punchy final camera zoom, clear negative space for subtitles, vertical 9:16.")
+    ]
+    scenes = [{"scene": i+1, "beat": beat, "voiceover": line,
+               "visual_prompt": visual + " Photorealistic, cinematic, coherent visual continuity, realistic motion, clean composition, no watermarks, no text artifacts."}
+              for i,(beat,line,visual) in enumerate(scene_texts)]
+    full_prompt = "Create a vertical 9:16 gaming short, " + str(duration) + " seconds. Topic: " + topic + ". " + " ".join(x["visual_prompt"] for x in scenes) + " Fast-paced edit, bold Swedish gaming subtitles, energetic natural voiceover."
+    plan_data = {"topic": topic, "trend_source": trend["source"], "source_url": trend["url"],
+                 "trend_score": trend["score"], "hook": hook, "script": script,
+                 "scenes": scenes, "duration_seconds": duration, "aspect_ratio": "9:16",
+                 "title": title, "caption": caption, "hashtags": ["#Gaming", "#GamingNews", "#Gamer", "#Roblox", "#GTA6"],
+                 "agnes_prompt": full_prompt, "quality_check": {"under_60_seconds": True,
+                 "vertical_9_16": True, "placeholder_text": False},
+                 "publishing": "Auto-upload is not enabled: connect and authorize official platform APIs first.",
+                 "scouting_note": "RSS trend discovery; verify news and avoid treating rumors as confirmed facts.",
+                 "feed_errors": len(feed_errors)}
+    history = _gaming_history()
+    history.insert(0, {"topic": topic, "hook": hook, "created_at": time.time(), "status": "planned"})
+    GAMING_HISTORY.write_text(json.dumps(history[:100], ensure_ascii=False, indent=2), encoding="utf-8")
+    return plan_data
+
+
 # Static mounts are registered at the very end, after all API routes.
 
 
