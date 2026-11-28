@@ -34,9 +34,13 @@ def generation_guard(cooldown_seconds: int):
                 raise HTTPException(429, "Please wait before starting another video job.")
             if not _generation_lock.acquire(blocking=False):
                 raise HTTPException(429, "A video job is already running. Try again shortly.")
-            _generation_last_started[func.__name__] = now
             try:
-                return func(*args, **kwargs)
+                result = func(*args, **kwargs)
+                # Apply cooldown only after the operation is accepted/succeeds.
+                # Missing credentials and provider errors must not trap the user
+                # behind NEXORA's local cooldown.
+                _generation_last_started[func.__name__] = now
+                return result
             finally:
                 _generation_lock.release()
         return wrapped
