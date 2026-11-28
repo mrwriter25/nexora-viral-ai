@@ -68,7 +68,15 @@ async function startRealAiVideo(){
   if(!resp.ok){
    const message=String(task.detail||'API-fel');
    if(/invalid token|unauthorized|401/i.test(message))throw Error('Agnes avvisade API-nyckeln. Kontrollera att AGNES_API_KEY är en aktiv nyckel från rätt Agnes-region i Render.');
-   if(resp.status===429)throw Error('NEXORA har en väntespärr eller Agnes rate limit. Vänta minst 70–90 sekunder innan nästa försök.');
+   if(resp.status===429){
+    if(/Please wait before starting another video job/i.test(message))
+     throw Error('NEXORA:s lokala väntespärr är aktiv. Vänta minst 70 sekunder från senaste försöket och klicka sedan EN gång.');
+    if(/already running/i.test(message))
+     throw Error('Ett videouppdrag kör redan på NEXORA. Vänta tills det är klart innan du startar ett nytt.');
+    if(/Agnes AI rate limit/i.test(message))
+     throw Error('Agnes AI:s egen rate limit har stoppat begäran. Det är inte NEXORA:s 70-sekundersspärr; vänta längre enligt leverantörens belastning och försök sedan igen.');
+    throw Error('Servern returnerade HTTP 429: '+message);
+   }
    throw Error(message);
   }
   box.textContent='Uppdrag startat. Video-ID: '+task.video_id+'\nVäntar på generering…';
